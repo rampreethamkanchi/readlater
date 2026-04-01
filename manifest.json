@@ -2,8 +2,8 @@
   "name": "ReadLater Priority",
   "short_name": "ReadLater",
   "description": "Your personal reading list sorted by deadline",
-  "start_url": "/readlater/",
-  "scope": "/readlater/",
+  "start_url": "https://rampreethamkanchi.github.io/readlater/",
+  "scope": "https://rampreethamkanchi.github.io/readlater/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#6366f1",
@@ -22,7 +22,7 @@
     }
   ],
   "share_target": {
-    "action": "/readlater/?share=true",
+    "action": "https://rampreethamkanchi.github.io/readlater/?share=true",
     "method": "GET",
     "params": {
       "title": "title",
