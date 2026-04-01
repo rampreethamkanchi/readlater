@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ReadLater Priority</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#6366f1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <style>
+    /* ===== RESET & VARIABLES ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --text: #1e293b;
+      --muted: #64748b;
+      --border: #e2e8f0;
+      --red: #ef4444;
+      --orange: #f97316;
+      --amber: #f59e0b;
+      --green: #22c55e;
+      --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      background: white;
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow);
+    }
+
+    .logo {
+      font-size: 17px;
+      font-weight: 800;
+      color: var(--primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .btn-add {
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-add:hover { background: var(--primary-dark); }
+
+    /* ===== MAIN LAYOUT ===== */
+    .main {
+      max-width: 820px;
+      margin: 0 auto;
+      padding: 28px 16px 60px;
+    }
+
+    /* ===== TABS ===== */
+    .tabs {
+      display: flex;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 22px;
+      background: white;
+      border-radius: 12px 12px 0 0;
+      padding: 0 4px;
+      box-shadow: var(--shadow);
+    }
+
+    .tab {
+      padding: 13px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+      transition: all 0.18s;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      user-select: none;
+    }
+
+    .tab:hover { color: var(--primary); }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+    .tab-badge {
+      background: #e0e7ff;
+      color: var(--primary);
+      border-radius: 20px;
+      padding: 1px 8px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .tab.active .tab-badge { background: var(--primary); color: white; }
+
+    /* ===== ERROR / LOADING ===== */
+    .error-bar {
+      background: #fee2e2;
+      color: #b91c1c;
+      padding: 11px 16px;
+      border-radius: 9px;
+      margin-bottom: 18px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .loading-area {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 70px 0;
+      gap: 12px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .spinner {
+      width: 22px; height: 22px;
+      border: 2.5px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ===== CARD LIST ===== */
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 11px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.18s, transform 0.15s;
+    }
+
+    .card:hover { box-shadow: var(--shadow-md); }
+
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 9px;
+      margin-bottom: 5px;
+    }
+
+    .favicon {
+      width: 18px; height: 18px;
+      border-radius: 3px;
+      margin-top: 2px;
+      flex-shrink: 0;
+      object-fit: contain;
+    }
+
+    .card-title {
+      flex: 1;
+      font-size: 15px;
+      font-weight: 600;
+      color: var(--text);
+      text-decoration: none;
+      line-height: 1.45;
+    }
+    .card-title:hover { color: var(--primary); text-decoration: underline; }
+
+    /* Deadline badge */
+    .badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
+      border-radius: 20px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .overdue  { background: #fee2e2; color: #b91c1c; }
+    .today    { background: #ffedd5; color: #c2410c; }
+    .soon     { background: #fef9c3; color: #854d0e; }
+    .later    { background: #dcfce7; color: #15803d; }
+
+    .card-domain {
+      font-size: 12px;
+      color: var(--muted);
+      margin-left: 27px;
+      margin-bottom: 7px;
+    }
+
+    .card-notes {
+      font-size: 13px;
+      color: #475569;
+      margin-left: 27px;
+      margin-bottom: 9px;
+      line-height: 1.5;
+      background: #f8fafc;
+      padding: 7px 11px;
+      border-radius: 7px;
+      border-left: 3px solid #cbd5e1;
+    }
+
+    .card-actions {
+      display: flex;
+      gap: 7px;
+      margin-left: 27px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 4px 11px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      background: white;
+      color: var(--muted);
+      font-family: inherit;
+      transition: all 0.13s;
+    }
+    .btn:hover { background: #f1f5f9; }
+
+    .btn-done     { color: #16a34a; border-color: #86efac; }
+    .btn-done:hover { background: #dcfce7; }
+
+    .btn-mv-arch  { color: #7c3aed; border-color: #c4b5fd; }
+    .btn-mv-arch:hover { background: #ede9fe; }
+
+    .btn-mv-read  { color: #0369a1; border-color: #7dd3fc; }
+    .btn-mv-read:hover { background: #e0f2fe; }
+
+    .btn-del      { color: #dc2626; border-color: #fca5a5; }
+    .btn-del:hover { background: #fee2e2; }
+
+    /* ===== EMPTY STATE ===== */
+    .empty {
+      text-align: center;
+      padding: 65px 20px;
+      color: var(--muted);
+    }
+    .empty-icon  { font-size: 50px; margin-bottom: 14px; }
+    .empty-title { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .empty-sub   { font-size: 14px; line-height: 1.5; }
+
+    /* ===== ADD / EDIT MODAL ===== */
+    .modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.55);
+      z-index: 300;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      width: 100%;
+      max-width: 490px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+      position: relative;
+    }
+
+    .modal-title {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 20px;
+      color: var(--text);
+    }
+
+    .field { margin-bottom: 14px; }
+
+    .field label {
+      display: block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      margin-bottom: 5px;
+    }
+
+    .field input,
+    .field textarea {
+      width: 100%;
+      padding: 9px 12px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--text);
+      background: white;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .field input:focus,
+    .field textarea:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(99,102,241,0.12);
+    }
+
+    .field textarea { resize: vertical; min-height: 76px; }
+
+    .field-hint {
+      font-size: 11.5px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 22px;
+    }
+
+    .btn-cancel {
+      padding: 9px 20px;
+      border: 1.5px solid var(--border);
+      border-radius: 9px;
+      background: white;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      color: var(--muted);
+      font-family: inherit;
+    }
+
+    .btn-save {
+      padding: 9px 22px;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.2s;
+      min-width: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+    }
+    .btn-save:hover { background: var(--primary-dark); }
+    .btn-save:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .btn-save .spinner {
+      width: 14px; height: 14px;
+      border-width: 2px;
+      border-color: rgba(255,255,255,0.35);
+      border-top-color: white;
+    }
+
+    /* ===== SET DEADLINE MINI MODAL ===== */
+    .mini-modal-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15,23,42,0.45);
+      z-index: 350;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .mini-modal {
+      background: white;
+      border-radius: 14px;
+      padding: 22px;
+      width: 100%;
+      max-width: 340px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.25);
+    }
+
+    .mini-modal h3 { font-size: 16px; font-weight: 700; margin-bottom: 14px; }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 600px) {
+      .header { padding: 0 14px; }
+      .main { padding: 16px 10px 60px; }
+      .card-title { font-size: 14px; }
+      .card-top { flex-wrap: wrap; }
+      .tab { padding: 11px 14px; font-size: 13px; }
+      .logo span:last-child { display: none; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- ===== HEADER ===== -->
+  <header class="header">
+    <div class="logo">
+      <span>📚</span>
+      <span>ReadLater Priority</span>
+    </div>
+    <button class="btn-add" id="btnAddNew">＋ Add New</button>
+  </header>
+
+  <!-- ===== MAIN ===== -->
+  <main class="main">
+    <div class="error-bar" id="errorBar"></div>
+    <div class="loading-area" id="loadingArea">
+      <div class="spinner"></div> Loading your reading list…
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs" id="tabBar">
+      <div class="tab active" id="tabReading" onclick="switchTab('reading')">
+        📖 Reading List <span class="tab-badge" id="cntReading">0</span>
+      </div>
+      <div class="tab" id="tabArchive" onclick="switchTab('archive')">
+        📦 Archive <span class="tab-badge" id="cntArchive">0</span>
+      </div>
+    </div>
+
+    <!-- Reading list panel -->
+    <div id="panelReading">
+      <div class="card-list" id="listReading"></div>
+    </div>
+
+    <!-- Archive panel -->
+    <div id="panelArchive" style="display:none">
+      <div class="card-list" id="listArchive"></div>
+    </div>
+  </main>
+
+  <!-- ===== ADD/EDIT MODAL ===== -->
+  <div class="modal-backdrop" id="addModal">
+    <div class="modal">
+      <div class="modal-title" id="modalTitle">Save New Page</div>
+      <div class="field">
+        <label>URL *</label>
+        <input type="url" id="fUrl" placeholder="https://example.com/article" />
+      </div>
+      <div class="field">
+        <label>Title</label>
+        <input type="text" id="fTitle" placeholder="Page title…" />
+      </div>
+      <div class="field">
+        <label>Read by deadline <span style="font-weight:400;text-transform:none">(optional)</span></label>
+        <input type="date" id="fDeadline" />
+        <div class="field-hint">Leave empty → saved to Archive with no deadline.</div>
+      </div>
+      <div class="field">
+        <label>Notes <span style="font-weight:400;text-transform:none">(optional)</span></label>
+        <textarea id="fNotes" placeholder="Why are you saving this? What to look for?"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeAddModal()">Cancel</button>
+        <button class="btn-save" id="btnModalSave" onclick="saveItem()">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== SET DEADLINE MINI MODAL ===== -->
+  <div class="mini-modal-backdrop" id="dlModal">
+    <div class="mini-modal">
+      <h3>📅 Set Deadline</h3>
+      <div class="field">
+        <label>Read by</label>
+        <input type="date" id="dlInput" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeDlModal()">Cancel</button>
+        <button class="btn-save" onclick="saveDeadline()">Set Deadline</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ===== CONFIG =====
+    const SUPABASE_URL = "https://wcmebpgpqkhqcmcjwslu.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndjbWVicGdwcWtocWNtY2p3c2x1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMTc3NDcsImV4cCI6MjA5MDU5Mzc0N30.eD0b0l5lVDR85rKv9HR2f3vVl4rwRKZZPYeqlIIk6VY";
+
+    // ===== STATE =====
+    let allItems  = [];
+    let activeTab = "reading";
+    let dlItemId  = null; // id of item being given a deadline
+
+    // ===== BOOT =====
+    document.addEventListener("DOMContentLoaded", () => {
+      registerSW();
+      checkShareTarget();   // opens add modal if opened via mobile Share
+      loadItems();
+      setupKeyboard();
+    });
+
+    // Register PWA service worker
+    function registerSW() {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      }
+    }
+
+    // If page opened via mobile Share button, pre-fill the add modal
+    function checkShareTarget() {
+      const p = new URLSearchParams(window.location.search);
+      const sharedUrl   = p.get("url") || p.get("text") || "";
+      const sharedTitle = p.get("title") || "";
+      if (sharedUrl) {
+        openAddModal(sharedUrl, sharedTitle);
+        // Clean the URL bar so refreshing doesn't re-open the modal
+        history.replaceState({}, "", location.pathname);
+      }
+    }
+
+    function setupKeyboard() {
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") { closeAddModal(); closeDlModal(); }
+      });
+      // Close modals on backdrop click
+      document.getElementById("addModal").addEventListener("click", (e) => {
+        if (e.target === document.getElementById("addModal")) closeAddModal();
+      });
+      document.getElementById("dlModal").addEventListener("click", (e) => {
+        if (e.target === document.getElementById("dlModal")) closeDlModal();
+      });
+    }
+
+    // ===== SUPABASE HELPERS =====
+    const HEADERS = {
+      apikey: SUPABASE_KEY,
+      Authorization: `Bearer ${SUPABASE_KEY}`,
+    };
+
+    async function dbGet(query) {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/reading_list${query}`, {
+        headers: HEADERS,
+      });
+      if (!r.ok) throw new Error(`DB error ${r.status}`);
+      return r.json();
+    }
+
+    async function dbPost(data) {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/reading_list`, {
+        method: "POST",
+        headers: { ...HEADERS, "Content-Type": "application/json", Prefer: "return=representation" },
+        body: JSON.stringify(data),
+      });
+      if (!r.ok) {
+        const e = await r.json().catch(() => ({}));
+        throw new Error(e.message || `DB error ${r.status}`);
+      }
+      return r.json();
+    }
+
+    async function dbPatch(id, data) {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/reading_list?id=eq.${id}`, {
+        method: "PATCH",
+        headers: { ...HEADERS, "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!r.ok) throw new Error(`DB error ${r.status}`);
+    }
+
+    async function dbDelete(id) {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/reading_list?id=eq.${id}`, {
+        method: "DELETE",
+        headers: HEADERS,
+      });
+      if (!r.ok) throw new Error(`DB error ${r.status}`);
+    }
+
+    // ===== LOAD DATA =====
+    async function loadItems() {
+      setLoading(true);
+      setError("");
+      try {
+        // Fetch all items; sort deadline ascending (nulls last), then by created_at desc
+        allItems = await dbGet("?select=*&order=deadline.asc.nullslast,created_at.desc");
+        render();
+      } catch (err) {
+        setError("Could not load items: " + err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    // ===== RENDER =====
+    function render() {
+      // Split: active = has deadline, archive = no deadline
+      const active  = allItems.filter((i) => i.deadline);
+      const archive = allItems.filter((i) => !i.deadline);
+
+      // Update counts
+      document.getElementById("cntReading").textContent = active.length;
+      document.getElementById("cntArchive").textContent = archive.length;
+
+      // Render panels
+      renderList(active,  "listReading",  "reading");
+      renderList(archive, "listArchive",  "archive");
+    }
+
+    function renderList(items, containerId, type) {
+      const el = document.getElementById(containerId);
+      if (!items.length) {
+        el.innerHTML = emptyHTML(type);
+        return;
+      }
+      el.innerHTML = items.map((i) => cardHTML(i, type)).join("");
+    }
+
+    function cardHTML(item, type) {
+      const domain     = getDomain(item.url);
+      const favicon    = `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+      const badge      = item.deadline ? deadlineBadge(item.deadline) : "";
+      const notesBlock = item.notes
+        ? `<div class="card-notes">${esc(item.notes)}</div>`
+        : "";
+
+      const actions =
+        type === "reading"
+          ? `<button class="btn btn-done"    onclick="markDone(${item.id})">✓ Done</button>
+             <button class="btn btn-mv-arch" onclick="moveToArchive(${item.id})">📦 Archive</button>
+             <button class="btn btn-del"     onclick="removeItem(${item.id})">🗑 Delete</button>`
+          : `<button class="btn btn-mv-read" onclick="promptDeadline(${item.id})">📅 Set Deadline</button>
+             <button class="btn btn-del"     onclick="removeItem(${item.id})">🗑 Delete</button>`;
+
+      return `
+        <div class="card" id="c${item.id}">
+          <div class="card-top">
+            <img class="favicon" src="${favicon}" alt=""
+                 onerror="this.style.visibility='hidden'" />
+            <a class="card-title" href="${esc(item.url)}" target="_blank" rel="noopener noreferrer">
+              ${esc(item.title || item.url)}
+            </a>
+            ${badge}
+          </div>
+          <div class="card-domain">${esc(domain)}</div>
+          ${notesBlock}
+          <div class="card-actions">${actions}</div>
+        </div>`;
+    }
+
+    function deadlineBadge(dl) {
+      const today = new Date(); today.setHours(0,0,0,0);
+      const d     = new Date(dl + "T00:00:00");
+      const diff  = Math.round((d - today) / 86400000);
+      let cls, label;
+      if      (diff < 0)  { cls = "overdue"; label = `⚠ Overdue ${Math.abs(diff)}d`; }
+      else if (diff === 0){ cls = "today";   label = "📌 Due Today"; }
+      else if (diff <= 7) { cls = "soon";    label = `⏳ ${diff}d left`; }
+      else                { cls = "later";   label = `📅 ${humanDate(dl)}`; }
+      return `<span class="badge ${cls}">${label}</span>`;
+    }
+
+    function emptyHTML(type) {
+      const [icon, title, sub] =
+        type === "reading"
+          ? ["📭", "Reading list is empty",
+             "Use the Chrome extension or click <b>+ Add New</b> above to save a page with a deadline."]
+          : ["📦", "Archive is empty",
+             "Pages saved without a deadline, or moved here, will appear in this tab."];
+      return `<div class="empty">
+        <div class="empty-icon">${icon}</div>
+        <div class="empty-title">${title}</div>
+        <div class="empty-sub">${sub}</div>
+      </div>`;
+    }
+
+    // ===== ACTIONS =====
+    async function markDone(id) {
+      if (!confirm("Mark as read and delete from list?")) return;
+      try {
+        await dbDelete(id);
+        allItems = allItems.filter((i) => i.id !== id);
+        render();
+      } catch (err) { alert("Error: " + err.message); }
+    }
+
+    async function moveToArchive(id) {
+      try {
+        await dbPatch(id, { deadline: null });
+        allItems = allItems.map((i) => (i.id === id ? { ...i, deadline: null } : i));
+        render();
+      } catch (err) { alert("Error: " + err.message); }
+    }
+
+    async function removeItem(id) {
+      if (!confirm("Permanently delete this item?")) return;
+      try {
+        await dbDelete(id);
+        allItems = allItems.filter((i) => i.id !== id);
+        render();
+      } catch (err) { alert("Error: " + err.message); }
+    }
+
+    function promptDeadline(id) {
+      dlItemId = id;
+      const item = allItems.find((i) => i.id === id);
+      const input = document.getElementById("dlInput");
+      input.value = item.deadline || "";
+      input.min   = new Date().toISOString().split("T")[0];
+      document.getElementById("dlModal").style.display = "flex";
+    }
+
+    async function saveDeadline() {
+      const date = document.getElementById("dlInput").value;
+      if (!date) { alert("Please pick a date first."); return; }
+      closeDlModal();
+      try {
+        await dbPatch(dlItemId, { deadline: date });
+        allItems = allItems.map((i) => (i.id === dlItemId ? { ...i, deadline: date } : i));
+        // Re-sort by deadline
+        allItems.sort((a, b) => {
+          if (!a.deadline && !b.deadline) return 0;
+          if (!a.deadline) return 1;
+          if (!b.deadline) return -1;
+          return new Date(a.deadline) - new Date(b.deadline);
+        });
+        render();
+      } catch (err) { alert("Error: " + err.message); }
+    }
+
+    function closeDlModal() {
+      document.getElementById("dlModal").style.display = "none";
+      dlItemId = null;
+    }
+
+    // ===== ADD MODAL =====
+    function openAddModal(prefillUrl = "", prefillTitle = "") {
+      document.getElementById("fUrl").value      = prefillUrl;
+      document.getElementById("fTitle").value    = prefillTitle;
+      document.getElementById("fDeadline").value = "";
+      document.getElementById("fNotes").value    = "";
+      document.getElementById("fDeadline").min   = new Date().toISOString().split("T")[0];
+      document.getElementById("addModal").style.display = "flex";
+      setTimeout(() => document.getElementById("fUrl").focus(), 50);
+    }
+
+    function closeAddModal() {
+      document.getElementById("addModal").style.display = "none";
+    }
+
+    async function saveItem() {
+      const url      = document.getElementById("fUrl").value.trim();
+      const title    = document.getElementById("fTitle").value.trim();
+      const deadline = document.getElementById("fDeadline").value || null;
+      const notes    = document.getElementById("fNotes").value.trim() || null;
+
+      if (!url) { alert("URL is required."); return; }
+
+      const btn = document.getElementById("btnModalSave");
+      btn.disabled   = true;
+      btn.innerHTML  = `<span class="spinner"></span> Saving…`;
+
+      try {
+        const result = await dbPost({
+          url,
+          title: title || url,
+          deadline,
+          notes,
+        });
+        // result is an array from Supabase when Prefer: return=representation
+        const newItem = Array.isArray(result) ? result[0] : result;
+        allItems.unshift(newItem);
+        // Re-sort
+        allItems.sort((a, b) => {
+          if (!a.deadline && !b.deadline) return 0;
+          if (!a.deadline) return 1;
+          if (!b.deadline) return -1;
+          return new Date(a.deadline) - new Date(b.deadline);
+        });
+        render();
+        closeAddModal();
+        // Switch to the right tab
+        switchTab(deadline ? "reading" : "archive");
+      } catch (err) {
+        alert("Failed to save: " + err.message);
+      } finally {
+        btn.disabled  = false;
+        btn.innerHTML = "Save";
+      }
+    }
+
+    document.getElementById("btnAddNew").addEventListener("click", () => openAddModal());
+
+    // ===== TABS =====
+    function switchTab(tab) {
+      activeTab = tab;
+      document.getElementById("tabReading").classList.toggle("active", tab === "reading");
+      document.getElementById("tabArchive").classList.toggle("active", tab === "archive");
+      document.getElementById("panelReading").style.display = tab === "reading" ? "block" : "none";
+      document.getElementById("panelArchive").style.display = tab === "archive" ? "block"  : "none";
+    }
+
+    // ===== HELPERS =====
+    function setLoading(on) {
+      const el = document.getElementById("loadingArea");
+      el.style.display = on ? "flex" : "none";
+      document.getElementById("tabBar").style.visibility = on ? "hidden" : "visible";
+    }
+
+    function setError(msg) {
+      const el = document.getElementById("errorBar");
+      el.style.display = msg ? "block" : "none";
+      el.textContent   = msg;
+    }
+
+    function getDomain(url) {
+      try { return new URL(url).hostname.replace("www.", ""); }
+      catch { return url; }
+    }
+
+    function humanDate(s) {
+      const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+      const [y, m, d] = s.split("-");
+      return `${parseInt(d)} ${months[parseInt(m) - 1]} ${y}`;
+    }
+
+    function esc(s) {
+      if (!s) return "";
+      return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+  </script>
+</body>
+</html>
